@@ -926,3 +926,78 @@ html, body, #root { height: 100%; margin: 0; }
   100% { opacity: 0; transform: translateX(-50%) translateY(-8px); }
 }
 
+
+/* VGH: postcode info (prio, alternatief bij verlof, opmerking) */
+.search-result-row {
+  flex-wrap: wrap;
+}
+
+.search-result-extra {
+  flex-basis: 100%;
+  color: #666;
+  font-size: 11px;
+}
+
+.postcode-prio {
+  font-size: 8px;
+  font-weight: 700;
+  color: #a32d2d;
+  margin-left: 1px;
+}
+
+.postcode-popup-content {
+  min-width: 220px;
+}
+
+.postcode-popup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  font-size: 12px;
+  color: #333;
+}
+
+.postcode-popup-label {
+  font-size: 10px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.postcode-popup-row select,
+.postcode-popup-row input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 4px 6px;
+  font-size: 12px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+/* labels sit on top of the postcode shape -- let clicks fall through to it */
+.postcode-label,
+.zone-label {
+  pointer-events: none !important;
+}
+
+/* advisors who aren't working right now: greyed out, at the bottom of the list */
+.advisor-row.inactive button {
+  color: #999;
+}
+
+.inactive-badge {
+  font-size: 10px;
+  font-weight: 500;
+  color: #777;
+  background: #ececec;
+  border-radius: 4px;
+  padding: 1px 5px;
+  white-space: nowrap;
+}
+
+p.inactive-badge {
+  display: inline-block;
+  font-size: 12px;
+  margin: 0 0 8px;
+}

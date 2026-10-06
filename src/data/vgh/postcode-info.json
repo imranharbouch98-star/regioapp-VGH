@@ -1,0 +1,132 @@
+{
+  "2100": {
+    "prio": "1"
+  },
+  "2110": {
+    "prio": "1"
+  },
+  "2150": {
+    "prio": "1"
+  },
+  "2160": {
+    "prio": "1"
+  },
+  "2170": {
+    "remark": "vanaf 200k €"
+  },
+  "2200": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2220": {
+    "prio": "2"
+  },
+  "2221": {
+    "prio": "2"
+  },
+  "2222": {
+    "prio": "2"
+  },
+  "2223": {
+    "prio": "2"
+  },
+  "2240": {
+    "prio": "1",
+    "alt": "Inge Van Noten"
+  },
+  "2242": {
+    "prio": "1",
+    "alt": "Inge Van Noten"
+  },
+  "2243": {
+    "prio": "1",
+    "alt": "Inge Van Noten"
+  },
+  "2250": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2260": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2270": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2275": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2280": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2288": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2290": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2430": {
+    "prio": "1"
+  },
+  "2431": {
+    "prio": "1"
+  },
+  "2450": {
+    "prio": "1"
+  },
+  "2460": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2500": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2520": {
+    "prio": "1",
+    "alt": "Inge Van Noten"
+  },
+  "2530": {
+    "prio": "2",
+    "alt": "Inge Van Noten"
+  },
+  "2531": {
+    "prio": "2",
+    "alt": "Inge Van Noten"
+  },
+  "2540": {
+    "prio": "2",
+    "alt": "Inge Van Noten"
+  },
+  "2560": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2590": {
+    "prio": "1",
+    "alt": "Chantal Groeneveld"
+  },
+  "2600": {
+    "prio": "1"
+  },
+  "2610": {
+    "prio": "1"
+  },
+  "2900": {
+    "prio": "1"
+  },
+  "2960": {
+    "prio": "1"
+  },
+  "2970": {
+    "prio": "1"
+  },
+  "2980": {
+    "prio": "1"
+  }
+}

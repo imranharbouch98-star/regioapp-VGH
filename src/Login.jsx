@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { firebaseEnabled, adminSignIn } from "./firebase.js";
 
-const VIEW_CODE = import.meta.env.VITE_ACCESS_CODE || "Bawaba";
+// no built-in fallback codes: each client deployment sets its own in .env /
+// Vercel, and with nothing set nobody can log in (instead of a shared default)
+const VIEW_CODE = import.meta.env.VITE_ACCESS_CODE || "";
 // only used when Firebase isn't configured (local dev) -- there's no shared
 // database to protect in that case, so a plain code is fine as a fallback
-const LOCAL_ADMIN_CODE = import.meta.env.VITE_ADMIN_ACCESS_CODE || "adminbawaba";
+const LOCAL_ADMIN_CODE = import.meta.env.VITE_ADMIN_ACCESS_CODE || "";
 // the single shared admin account's email (created once in the Firebase
 // Console); the login form itself only asks for the password
-const ADMIN_EMAIL = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || "admin@regioapp.local";
+const ADMIN_EMAIL = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || "admin@vgh.local";
 
 export default function Login({ onSuccess }) {
   const [mode, setMode] = useState("viewer");
@@ -23,7 +25,9 @@ export default function Login({ onSuccess }) {
 
   function handleViewerSubmit(e) {
     e.preventDefault();
-    if (code.trim() === VIEW_CODE) {
+    if (!VIEW_CODE) {
+      setError("Toegangscode is niet ingesteld (VITE_ACCESS_CODE)");
+    } else if (code.trim() === VIEW_CODE) {
       onSuccess("viewer");
     } else {
       setError("Foute code, probeer opnieuw");
@@ -35,7 +39,9 @@ export default function Login({ onSuccess }) {
     setError("");
 
     if (!firebaseEnabled) {
-      if (password === LOCAL_ADMIN_CODE) {
+      if (!LOCAL_ADMIN_CODE) {
+        setError("Beheerderscode is niet ingesteld (VITE_ADMIN_ACCESS_CODE)");
+      } else if (password === LOCAL_ADMIN_CODE) {
         onSuccess("admin");
       } else {
         setError("Foute code, probeer opnieuw");

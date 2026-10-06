@@ -8,16 +8,10 @@ import { firebaseEnabled, subscribeToOverrides, saveOverridesShared, subscribeTo
 import avatarMale from "./assets/avatar-male.png";
 import avatarFemale from "./assets/avatar-female.png";
 
-import advisorPostcodesBase from "./data/advisor-postcodes.json";
-import advisorsHome from "./data/advisors-home.json";
-import postcodeNames from "./data/postcode-names.json";
-import notesData from "./data/notes.json";
-import advisorTagsBase from "./data/advisor-tags.json";
-
-import advisorPostcodesAlkmaar from "./data/advisor-postcodes-alkmaar.json";
-import advisorsHomeAlkmaar from "./data/advisors-home-alkmaar.json";
-import postcodeNamesAlkmaar from "./data/postcode-names-alkmaar.json";
-import notesDataAlkmaar from "./data/notes-alkmaar.json";
+// gegenereerd door scripts/build-vgh-data.mjs uit de VGH-spreadsheet
+import advisorPostcodesVgh from "./data/vgh/advisor-postcodes.json";
+import postcodeNamesVgh from "./data/vgh/postcode-names.json";
+import postcodeInfoVgh from "./data/vgh/postcode-info.json";
 
 const AUTH_KEY = "map-auth-ok";
 const ROLE_KEY = "map-auth-role";
@@ -30,13 +24,7 @@ const COLORS = [
 const SEARCH_COLORS = ["#EF9F27", "#3B8BD4", "#639922", "#D4537E", "#8B5CF6", "#0c447c"];
 const MAX_SEARCH_FIELDS = SEARCH_COLORS.length;
 
-const VLAANDEREN_TAG_DEFS = [
-  { id: "prio", emoji: "👑", label: "Prioriteit", bold: true },
-  { id: "airco", emoji: "🌬️", label: "Airco" },
-  { id: "zp", emoji: "☀️", label: "Zonnepanelen" },
-  { id: "wpb", emoji: "💧", label: "Warmtepompboiler" },
-  { id: "wplw", emoji: "🔥", label: "Warmtepomp lucht-water" },
-];
+const PRIO_OPTIONS = ["1", "2", "3"];
 
 const PRODUCT_DEFS = [
   { id: "airco", emoji: "🌬️", label: "Airco" },
@@ -44,6 +32,7 @@ const PRODUCT_DEFS = [
   { id: "thuisbatterij", emoji: "🔋", label: "Thuisbatterij" },
   { id: "wplw", emoji: "🔥", label: "Lucht-Water warmtepomp" },
   { id: "wpb", emoji: "💧", label: "Warmtepompboiler" },
+  { id: "infraroodpanelen", emoji: "🌡️", label: "Infraroodpanelen" },
 ];
 
 const LANGUAGE_DEFS = ["FR", "NL", "ENG"];
@@ -72,62 +61,43 @@ function emptyProfile() {
   };
 }
 
-// elk departement is volledig apart: eigen kaartdata, eigen adviseurs, eigen
-// opslag-sleutel. Ze delen geen data en botsen dus nooit met elkaar.
+// VGH heeft een eigen Firebase-project (eigen database), dus de Firebase-
+// paden botsen nooit met andere klanten. De localStorage-sleutels krijgen
+// wel een "-vgh"-achtervoegsel: lokaal (localhost) delen alle versies van de
+// app dezelfde browseropslag.
 const DEPARTMENTS = [
   {
-    id: "vlaanderen",
-    label: "Vlaanderen & Zuid-NL",
-    postcodesUrl: "/data/postcodes.geojson",
-    advisorPostcodesBase,
-    advisorsHome,
-    postcodeNames,
-    notesSeed: notesData,
-    notesStorageKey: "advisor-notes",
+    id: "vgh",
+    label: "VGH",
+    postcodesUrl: "/data/postcodes-vgh.geojson",
+    advisorPostcodesBase: advisorPostcodesVgh,
+    advisorsHome: {},
+    postcodeNames: postcodeNamesVgh,
+    postcodeInfoBase: postcodeInfoVgh,
+    // "Chantal niet actief momenteel" in de spreadsheet; een beheerder kan dit
+    // per adviseur aan/uit zetten in het profiel (dat wint dan altijd)
+    inactiveAdvisorsBase: ["Chantal Groeneveld"],
+    postcodeInfoStorageKey: "postcode-info-overrides-vgh",
+    postcodeInfoFirebasePath: "postcodeInfoOverrides",
+    notesSeed: [],
+    notesStorageKey: "advisor-notes-vgh",
     notesFirebasePath: "advisorNotes",
-    storageKey: "advisor-postcode-overrides",
+    storageKey: "advisor-postcode-overrides-vgh",
     firebasePath: "advisorPostcodeOverrides",
-    center: [50.95, 4.6],
-    zoom: 8,
-    tagDefs: VLAANDEREN_TAG_DEFS,
-    advisorTagsBase,
-    tagsStorageKey: "advisor-tag-overrides",
-    tagsFirebasePath: "advisorTagOverrides",
-    deletedStorageKey: "advisor-deleted-overrides",
-    deletedFirebasePath: "advisorDeletedOverrides",
-    addedStorageKey: "advisor-added-overrides",
-    addedFirebasePath: "advisorAddedOverrides",
-    homeStorageKey: "advisor-home-overrides",
-    homeFirebasePath: "advisorHomeOverrides",
-    profilesStorageKey: "advisor-profiles",
-    profilesFirebasePath: "advisorProfiles",
-  },
-  {
-    id: "alkmaar",
-    label: "Alkmaar",
-    postcodesUrl: "/data/postcodes-alkmaar.geojson",
-    advisorPostcodesBase: advisorPostcodesAlkmaar,
-    advisorsHome: advisorsHomeAlkmaar,
-    postcodeNames: postcodeNamesAlkmaar,
-    notesSeed: notesDataAlkmaar,
-    notesStorageKey: "advisor-notes-alkmaar",
-    notesFirebasePath: "advisorNotesAlkmaar",
-    storageKey: "advisor-postcode-overrides-alkmaar",
-    firebasePath: "advisorPostcodeOverridesAlkmaar",
-    center: [52.6, 5.0],
-    zoom: 8,
+    center: [51.2, 4.65],
+    zoom: 10,
     tagDefs: [],
     advisorTagsBase: {},
-    tagsStorageKey: "advisor-tag-overrides-alkmaar",
-    tagsFirebasePath: "advisorTagOverridesAlkmaar",
-    deletedStorageKey: "advisor-deleted-overrides-alkmaar",
-    deletedFirebasePath: "advisorDeletedOverridesAlkmaar",
-    addedStorageKey: "advisor-added-overrides-alkmaar",
-    addedFirebasePath: "advisorAddedOverridesAlkmaar",
-    homeStorageKey: "advisor-home-overrides-alkmaar",
-    homeFirebasePath: "advisorHomeOverridesAlkmaar",
-    profilesStorageKey: "advisor-profiles-alkmaar",
-    profilesFirebasePath: "advisorProfilesAlkmaar",
+    tagsStorageKey: "advisor-tag-overrides-vgh",
+    tagsFirebasePath: "advisorTagOverrides",
+    deletedStorageKey: "advisor-deleted-overrides-vgh",
+    deletedFirebasePath: "advisorDeletedOverrides",
+    addedStorageKey: "advisor-added-overrides-vgh",
+    addedFirebasePath: "advisorAddedOverrides",
+    homeStorageKey: "advisor-home-overrides-vgh",
+    homeFirebasePath: "advisorHomeOverrides",
+    profilesStorageKey: "advisor-profiles-vgh",
+    profilesFirebasePath: "advisorProfiles",
   },
 ];
 
@@ -262,6 +232,8 @@ function DeptMap({ config, isAdmin }) {
     addedStorageKey, addedFirebasePath,
     homeStorageKey, homeFirebasePath,
     profilesStorageKey, profilesFirebasePath,
+    postcodeInfoBase, postcodeInfoStorageKey, postcodeInfoFirebasePath,
+    inactiveAdvisorsBase = [],
   } = config;
 
   const [postcodesGeo, setPostcodesGeo] = useState(null);
@@ -272,6 +244,7 @@ function DeptMap({ config, isAdmin }) {
   const [addedAdvisors, setAddedAdvisors] = useState(() => loadOverrides(addedStorageKey));
   const [homeOverrides, setHomeOverrides] = useState(() => loadOverrides(homeStorageKey));
   const [profiles, setProfiles] = useState(() => loadOverrides(profilesStorageKey));
+  const [postcodeInfoOverrides, setPostcodeInfoOverrides] = useState(() => loadOverrides(postcodeInfoStorageKey));
   const [notesList, setNotesList] = useState(() => {
     try {
       const raw = localStorage.getItem(notesStorageKey);
@@ -346,6 +319,13 @@ function DeptMap({ config, isAdmin }) {
       return unsubscribe;
     }
   }, [homeFirebasePath]);
+
+  useEffect(() => {
+    if (firebaseEnabled) {
+      const unsubscribe = subscribeToOverrides(postcodeInfoFirebasePath, (shared) => setPostcodeInfoOverrides(shared));
+      return unsubscribe;
+    }
+  }, [postcodeInfoFirebasePath]);
 
   // one-time backfill: copy each advisor's original product tags into their
   // profile, since the profile used to be a separate, empty data store
@@ -428,14 +408,45 @@ function DeptMap({ config, isAdmin }) {
     return { ...advisorTagsBase, ...tagOverrides };
   }, [advisorTagsBase, tagOverrides]);
 
+  // per postcode: prio, alternatief bij verlof en opmerking (bv. "vanaf 200k €").
+  // An override replaces the whole entry for that postcode; an override
+  // without any fields means "cleared", which Firebase stores as `true`
+  const postcodeInfo = useMemo(() => {
+    const merged = { ...(postcodeInfoBase || {}) };
+    Object.entries(postcodeInfoOverrides).forEach(([pc, info]) => {
+      merged[pc] = info && typeof info === "object" ? info : {};
+    });
+    return merged;
+  }, [postcodeInfoBase, postcodeInfoOverrides]);
+
   const advisorNames = useMemo(() => {
     // union with addedAdvisors: a brand-new advisor with zero postcodes has
     // nothing to actually store in advisorPostcodes (Firebase can't persist
     // an empty array, so that key just wouldn't survive a refresh) -- their
     // existence is tracked here instead, independent of their postcode list
     const names = new Set([...Object.keys(advisorPostcodes), ...Object.keys(addedAdvisors)]);
-    return Array.from(names).filter((n) => !deletedAdvisors[n]).sort((a, b) => a.localeCompare(b));
-  }, [advisorPostcodes, addedAdvisors, deletedAdvisors]);
+    // inactive advisors go to the bottom of the list
+    return Array.from(names)
+      .filter((n) => !deletedAdvisors[n])
+      .sort((a, b) => isInactive(a) - isInactive(b) || a.localeCompare(b));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [advisorPostcodes, addedAdvisors, deletedAdvisors, profiles, inactiveAdvisorsBase]);
+
+  // explicit profile setting wins; otherwise the bundled default for this client
+  function isInactive(name) {
+    const flag = profiles[name]?.inactive;
+    return typeof flag === "boolean" ? flag : inactiveAdvisorsBase.includes(name);
+  }
+
+  function withInactiveMark(name) {
+    return name && isInactive(name) ? `${name} (niet actief)` : name;
+  }
+
+  // the alternate is only shown while that person still exists as an advisor
+  function altFor(pc) {
+    const alt = postcodeInfo[pc]?.alt;
+    return alt && advisorNames.includes(alt) ? alt : "";
+  }
 
   useEffect(() => {
     fetch(postcodesUrl)
@@ -443,6 +454,10 @@ function DeptMap({ config, isAdmin }) {
       .then((geo) => {
         geo.features = geo.features.filter((f) => f && f.geometry);
         setPostcodesGeo(geo);
+        // the map only contains this client's postcodes, so zoom to exactly those
+        if (mapRef.current && geo.features.length) {
+          mapRef.current.fitBounds(L.geoJSON(geo).getBounds(), { padding: [20, 20] });
+        }
       });
   }, [postcodesUrl]);
 
@@ -533,6 +548,12 @@ function DeptMap({ config, isAdmin }) {
     return new Set(advisorPostcodes[selected] || []);
   }, [selected, advisorPostcodes]);
 
+  // postcodes where the selected advisor is the "alternatief bij verlof"
+  const selectedAltSet = useMemo(() => {
+    if (!selected) return null;
+    return new Set(Object.keys(postcodeInfo).filter((pc) => postcodeInfo[pc]?.alt === selected));
+  }, [selected, postcodeInfo]);
+
   const colorIndex = selected ? advisorNames.indexOf(selected) : 0;
   const highlightColor = colorForIndex(colorIndex);
 
@@ -550,19 +571,22 @@ function DeptMap({ config, isAdmin }) {
     const pc = feature.properties.postcode;
     const hit = searchByPostcode.get(pc);
     if (hit) {
-      return { fillColor: hit.color, fillOpacity: 0.5, color: hit.color, weight: 3 };
+      return { fillColor: hit.color, fillOpacity: 0.5, color: hit.color, weight: 3, dashArray: null };
     }
     const isActive = selectedPostcodeSet && selectedPostcodeSet.has(pc);
     if (isActive) {
-      return { fillColor: highlightColor, fillOpacity: 0.4, color: highlightColor, weight: 1.5 };
+      return { fillColor: highlightColor, fillOpacity: 0.4, color: highlightColor, weight: 1.5, dashArray: null };
     }
-    return { fillColor: "#888", fillOpacity: 0, color: "#999", weight: 0.3 };
+    if (selectedAltSet && selectedAltSet.has(pc)) {
+      return { fillColor: highlightColor, fillOpacity: 0.12, color: highlightColor, weight: 2, dashArray: "6 4" };
+    }
+    return { fillColor: "#888", fillOpacity: 0, color: "#999", weight: 0.3, dashArray: null };
   };
 
   useEffect(() => {
     if (advisorLayerRef.current) advisorLayerRef.current.setStyle(styleFn);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedPostcodeSet, highlightColor, searchByPostcode]);
+  }, [selectedPostcodeSet, selectedAltSet, highlightColor, searchByPostcode]);
 
   function showToast(message) {
     setToast(message);
@@ -588,7 +612,7 @@ function DeptMap({ config, isAdmin }) {
     setPanelNameDraft(name);
     setPanelNameError("");
     setPanelHomeDraft(advisorHomePostcode[name] || "");
-    setProfileDraft({ ...emptyProfile(), ...(profiles[name] || {}) });
+    setProfileDraft({ ...emptyProfile(), ...(profiles[name] || {}), inactive: isInactive(name) });
     // keep the map highlight in sync so the admin can see what they're editing
     setSelected(name);
     setDraft((advisorPostcodes[name] || []).join(", "));
@@ -621,12 +645,54 @@ function DeptMap({ config, isAdmin }) {
     showToast(has ? "Postcode verwijderd" : "Postcode toegevoegd");
   }
 
+  function savePostcodeInfo(pc, info) {
+    const clean = {};
+    if (info.prio) clean.prio = info.prio;
+    if (info.alt) clean.alt = info.alt;
+    if (info.remark) clean.remark = info.remark;
+    // Firebase drops empty objects, so a cleared postcode is stored as `true`
+    // -- otherwise the bundled spreadsheet value would silently come back
+    const next = { ...postcodeInfoOverrides, [pc]: Object.keys(clean).length ? clean : true };
+    setPostcodeInfoOverrides(next);
+    if (firebaseEnabled) {
+      saveOverridesShared(postcodeInfoFirebasePath, next);
+    } else {
+      saveOverridesLocal(postcodeInfoStorageKey, next);
+    }
+    showToast("Postcode bijgewerkt");
+  }
+
+  function popupRow(parent, labelText, valueText) {
+    const row = document.createElement("div");
+    row.className = "postcode-popup-row";
+    const lbl = document.createElement("span");
+    lbl.className = "postcode-popup-label";
+    lbl.textContent = labelText;
+    const val = document.createElement("span");
+    val.textContent = valueText;
+    row.append(lbl, val);
+    parent.appendChild(row);
+    return row;
+  }
+
+  function popupSelect(options, value) {
+    const sel = document.createElement("select");
+    options.forEach(([v, text]) => {
+      const opt = document.createElement("option");
+      opt.value = v;
+      opt.textContent = text;
+      sel.appendChild(opt);
+    });
+    sel.value = value;
+    return sel;
+  }
+
   // bound once via onEachFeature, so re-assigning this every render (instead of
   // relying on the closure captured at mount) keeps it seeing current state
   handlePostcodeClickRef.current = function handlePostcodeMapClick(pc, latlng) {
-    if (!isAdmin || !selected || !mapRef.current) return;
-    const current = advisorPostcodes[selected] || [];
-    const has = current.includes(pc);
+    if (!mapRef.current) return;
+    const info = postcodeInfo[pc] || {};
+    const responsible = advisorNames.filter((name) => (advisorPostcodes[name] || []).includes(pc));
     const label = postcodeNames[pc] ? `${pc} (${postcodeNames[pc]})` : pc;
 
     if (activePopupRef.current) {
@@ -638,23 +704,55 @@ function DeptMap({ config, isAdmin }) {
 
     const title = document.createElement("div");
     title.className = "postcode-popup-title";
-    title.textContent = `${label} · ${selected}`;
+    title.textContent = label;
     container.appendChild(title);
-
-    const btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = has ? "postcode-popup-btn remove" : "postcode-popup-btn add";
-    btn.textContent = has ? "Verwijderen" : "Toevoegen";
-    container.appendChild(btn);
 
     const popup = L.popup({ closeButton: true, className: "postcode-popup" })
       .setLatLng(latlng)
       .setContent(container);
 
-    btn.addEventListener("click", () => {
-      applyPostcodeToggle(pc, has);
-      popup.close();
-    });
+    popupRow(container, "Verantwoordelijke", responsible.join(", ") || "niemand toegewezen");
+
+    if (!isAdmin) {
+      popupRow(container, "Prio", info.prio || "-");
+      popupRow(container, "Alternatief bij verlof", withInactiveMark(altFor(pc)) || "-");
+      if (info.remark) popupRow(container, "Opmerking", info.remark);
+    } else {
+      const prioSel = popupSelect([["", "-"], ...PRIO_OPTIONS.map((p) => [p, p])], info.prio || "");
+      popupRow(container, "Prio", "").lastChild.replaceWith(prioSel);
+
+      const altSel = popupSelect([["", "-"], ...advisorNames.map((n) => [n, n])], altFor(pc));
+      popupRow(container, "Alternatief bij verlof", "").lastChild.replaceWith(altSel);
+
+      const remarkInput = document.createElement("input");
+      remarkInput.type = "text";
+      remarkInput.placeholder = "bv. vanaf 200k €";
+      remarkInput.value = info.remark || "";
+      popupRow(container, "Opmerking", "").lastChild.replaceWith(remarkInput);
+
+      const saveBtn = document.createElement("button");
+      saveBtn.type = "button";
+      saveBtn.className = "postcode-popup-btn add";
+      saveBtn.textContent = "Opslaan";
+      saveBtn.addEventListener("click", () => {
+        savePostcodeInfo(pc, { prio: prioSel.value, alt: altSel.value, remark: remarkInput.value.trim() });
+        popup.close();
+      });
+      container.appendChild(saveBtn);
+
+      if (selected) {
+        const has = (advisorPostcodes[selected] || []).includes(pc);
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = has ? "postcode-popup-btn remove" : "postcode-popup-btn add";
+        btn.textContent = has ? `Verwijderen bij ${selected}` : `Toevoegen aan ${selected}`;
+        btn.addEventListener("click", () => {
+          applyPostcodeToggle(pc, has);
+          popup.close();
+        });
+        container.appendChild(btn);
+      }
+    }
 
     activePopupRef.current = popup;
     popup.openOn(mapRef.current);
@@ -754,6 +852,19 @@ function DeptMap({ config, isAdmin }) {
         saveOverridesShared(addedFirebasePath, nextAdded);
       } else {
         saveOverridesLocal(addedStorageKey, nextAdded);
+      }
+
+      // postcodes where this advisor is the "alternatief bij verlof" follow the rename
+      const altPcs = Object.keys(postcodeInfo).filter((pc) => postcodeInfo[pc]?.alt === oldName);
+      if (altPcs.length) {
+        const nextInfo = { ...postcodeInfoOverrides };
+        altPcs.forEach((pc) => { nextInfo[pc] = { ...postcodeInfo[pc], alt: newName }; });
+        setPostcodeInfoOverrides(nextInfo);
+        if (firebaseEnabled) {
+          saveOverridesShared(postcodeInfoFirebasePath, nextInfo);
+        } else {
+          saveOverridesLocal(postcodeInfoStorageKey, nextInfo);
+        }
       }
 
       setPanelAdvisor(newName);
@@ -923,17 +1034,20 @@ function DeptMap({ config, isAdmin }) {
     localStorage.removeItem(deletedStorageKey);
     localStorage.removeItem(addedStorageKey);
     localStorage.removeItem(homeStorageKey);
+    localStorage.removeItem(postcodeInfoStorageKey);
     setOverrides({});
     setTagOverrides({});
     setDeletedAdvisors({});
     setAddedAdvisors({});
     setHomeOverrides({});
+    setPostcodeInfoOverrides({});
     if (firebaseEnabled) {
       saveOverridesShared(firebasePath, {});
       saveOverridesShared(tagsFirebasePath, {});
       saveOverridesShared(deletedFirebasePath, {});
       saveOverridesShared(addedFirebasePath, {});
       saveOverridesShared(homeFirebasePath, {});
+      saveOverridesShared(postcodeInfoFirebasePath, {});
     }
     setSelected(null);
     setDraft("");
@@ -961,7 +1075,15 @@ function DeptMap({ config, isAdmin }) {
       if (matchedPostcodes.length) {
         matchedPostcodes.forEach((pc) => {
           const advisors = advisorNames.filter((name) => (advisorPostcodes[name] || []).includes(pc));
-          results.push({ postcode: pc, name: postcodeNames[pc], color: SEARCH_COLORS[i], advisors });
+          results.push({
+            postcode: pc,
+            name: postcodeNames[pc],
+            color: SEARCH_COLORS[i],
+            advisors,
+            prio: postcodeInfo[pc]?.prio || "",
+            alt: altFor(pc),
+            remark: postcodeInfo[pc]?.remark || "",
+          });
         });
       } else {
         missing.push(entry);
@@ -1041,7 +1163,7 @@ function DeptMap({ config, isAdmin }) {
         )}
         {addAdvisorError && <p className="warning">{addAdvisorError}</p>}
         <p className="hint">
-          Klik op een naam om de regio te tonen{isAdmin ? " · dubbelklik om te bewerken" : ""}
+          Klik op een naam om de regio te tonen (gestreept = alternatief bij verlof){isAdmin ? " · dubbelklik om te bewerken" : ""} · klik op een postcode voor info
         </p>
         <ul className="advisor-list">
           {advisorNames.map((name, i) => {
@@ -1054,8 +1176,9 @@ function DeptMap({ config, isAdmin }) {
             const prioEmoji = oldPrioTag?.emoji || "👑";
             const nameProducts = profiles[name]?.products || [];
             const activeTags = PRODUCT_DEFS.filter((p) => nameProducts.includes(p.id));
+            const inactive = isInactive(name);
             return (
-              <li key={name} className="advisor-row">
+              <li key={name} className={inactive ? "advisor-row inactive" : "advisor-row"}>
                 <button
                   className={selected === name ? "active" : ""}
                   style={
@@ -1070,7 +1193,7 @@ function DeptMap({ config, isAdmin }) {
                   title={isAdmin ? "Dubbelklik om te bewerken" : undefined}
                 >
                   <span className="advisor-row-top">
-                    <span className="dot" style={{ background: colorForIndex(i) }} />
+                    <span className="dot" style={{ background: inactive ? "#bbb" : colorForIndex(i) }} />
                     <span style={isPrio ? { fontWeight: 700, background: "#FFD70055", padding: "1px 5px", borderRadius: "4px" } : {}}>{name}</span>
                     {isPrio && <span title={prioLabel}>{prioEmoji}</span>}
                     {advisorHomePostcode[name] && (
@@ -1078,6 +1201,11 @@ function DeptMap({ config, isAdmin }) {
                     )}
                     {(overrides[name] || tagOverrides[name]) && <span className="edited-mark" title="Aangepast">●</span>}
                   </span>
+                  {inactive && (
+                    <span className="advisor-row-icons">
+                      <span className="inactive-badge" title="Momenteel niet actief">niet actief</span>
+                    </span>
+                  )}
                   {activeTags.length > 0 && (
                     <span className="advisor-row-icons">
                       {activeTags.map((td) => <span key={td.id} title={td.label}>{td.emoji}</span>)}
@@ -1122,7 +1250,7 @@ function DeptMap({ config, isAdmin }) {
             <input
               key={i}
               type="text"
-              placeholder={i === 0 ? "Postcode of plaats, bv. 3600 of Genk" : `Postcode of plaats ${i + 1} (optioneel)`}
+              placeholder={i === 0 ? "Postcode of plaats, bv. 2500 of Lier" : `Postcode of plaats ${i + 1} (optioneel)`}
               value={val}
               onChange={(e) => updateSearchField(i, e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && runSearch()}
@@ -1141,9 +1269,11 @@ function DeptMap({ config, isAdmin }) {
           {searchError && <span className="search-error">{searchError}</span>}
           {activeSearch.length > 0 && (
             <div className="search-results">
-              {activeSearch.map(({ postcode, name, color, advisors }) => (
+              {activeSearch.map(({ postcode, name, color, advisors, prio, alt, remark }) => (
                 <div key={postcode} className="search-result-row">
-                  <span className="search-result-pc" style={{ color }}>{postcode}{name ? ` · ${name}` : ""}</span>
+                  <span className="search-result-pc" style={{ color }}>
+                    {postcode}{name ? ` · ${name}` : ""}{prio ? ` · Prio ${prio}` : ""}
+                  </span>
                   <span className="search-result-names">
                     {advisors.length
                       ? advisors.map((n, idx) => {
@@ -1156,6 +1286,11 @@ function DeptMap({ config, isAdmin }) {
                         })
                       : "niemand toegewezen"}
                   </span>
+                  {(alt || remark) && (
+                    <span className="search-result-extra">
+                      {[alt && `Alternatief bij verlof: ${withInactiveMark(alt)}`, remark].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
                 </div>
               ))}
             </div>
@@ -1184,15 +1319,17 @@ function DeptMap({ config, isAdmin }) {
 
           {!showPostcodeLabels &&
             zoneLabels.map(({ zone, lat, lng }) => (
-              <CircleMarker key={"zone-" + zone} center={[lat, lng]} radius={1} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+              <CircleMarker key={"zone-" + zone} center={[lat, lng]} radius={1} interactive={false} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
                 <Tooltip permanent direction="center" className="zone-label">{zone}</Tooltip>
               </CircleMarker>
             ))}
 
           {showPostcodeLabels &&
             visiblePostcodeLabels.map(({ pc, lat, lng }) => (
-              <CircleMarker key={"pc-" + pc} center={[lat, lng]} radius={1} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
-                <Tooltip permanent direction="center" className="postcode-label">{pc}</Tooltip>
+              <CircleMarker key={"pc-" + pc} center={[lat, lng]} radius={1} interactive={false} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+                <Tooltip permanent direction="center" className="postcode-label">
+                  {pc}{postcodeInfo[pc]?.prio && <sup className="postcode-prio">P{postcodeInfo[pc].prio}</sup>}
+                </Tooltip>
               </CircleMarker>
             ))}
 
@@ -1200,7 +1337,7 @@ function DeptMap({ config, isAdmin }) {
             const c = postcodeToCentroid[pc];
             if (!c) return null;
             return (
-              <CircleMarker key={"note-" + pc} center={c} radius={1} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
+              <CircleMarker key={"note-" + pc} center={c} radius={1} interactive={false} pathOptions={{ opacity: 0, fillOpacity: 0 }}>
                 <Tooltip permanent direction="top" className="sticky-note-wrap">
                   <div
                     className="sticky-note"
@@ -1298,7 +1435,9 @@ function DeptMap({ config, isAdmin }) {
       )}
 
       {panelAdvisor && (() => {
-        const viewProfile = profiles[panelAdvisor] || emptyProfile();
+        // merged with the defaults: Firebase drops empty arrays, so a saved
+        // profile can come back without `products`/`languages`
+        const viewProfile = { ...emptyProfile(), ...(profiles[panelAdvisor] || {}) };
         return (
           <>
             <div className="advisor-panel-backdrop" onClick={closeAdvisorPanel} />
@@ -1352,6 +1491,17 @@ function DeptMap({ config, isAdmin }) {
                       ))}
                     </div>
                   )}
+
+                  <div className="profile-section">
+                    <label className="profile-checkbox-row">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(profileDraft.inactive)}
+                        onChange={(e) => updateProfileField("inactive", e.target.checked)}
+                      />
+                      <span>Momenteel niet actief</span>
+                    </label>
+                  </div>
 
                   <div className="profile-section">
                     <p className="hint">Profielfoto</p>
@@ -1453,6 +1603,7 @@ function DeptMap({ config, isAdmin }) {
               ) : (
                 <>
                   <div className="profile-photo"><ProfileAvatar gender={viewProfile.gender} /></div>
+                  {isInactive(panelAdvisor) && <p className="inactive-badge">Momenteel niet actief</p>}
                   {viewProfile.tier && (
                     <p className="profile-tier">{viewProfile.tier === "A" ? "👑 A-Adviseur" : "B-Adviseur"}</p>
                   )}

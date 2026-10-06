@@ -1,4 +1,39 @@
-# Regiokaart adviseurs
+# Regiokaart VGH
+
+Versie van de regiokaart voor **VGH**, volledig los van de originele klant:
+eigen adviseurs, eigen postcodes, eigen logins en een eigen Firebase-database.
+
+## VGH-data bijwerken vanuit de spreadsheet
+
+De bron is `scripts/vgh/vgh-postcodes.tsv` -- de kolommen Postcode, Plaats,
+Prio, Verantwoordelijke en Alternatief bij verlof uit de VGH-spreadsheet
+(in die volgorde; extra kolommen erachter worden genegeerd). Plak de
+bijgewerkte rijen erin en draai:
+```
+node scripts/build-vgh-data.mjs
+```
+Dat herbouwt `src/data/vgh/` (adviseurs + postcodes, prio/alternatief/
+opmerking per postcode, plaatsnamen) en `public/data/postcodes-vgh.geojson`
+(enkel de postcodes uit de spreadsheet). Nummers achter namen ("Inge Steurs
+257") worden weggelaten; tekst tussen haakjes ("(vanaf 200k €)") wordt de
+opmerking bij die postcode.
+
+## VGH opzetten (eenmalig)
+
+1. **Nieuwe GitHub-repo** voor VGH, en `git remote set-url origin <nieuwe-url>`
+   -- deze map wijst nog naar de repo van de originele klant.
+2. **Nieuw Firebase-project** (zie "Gedeeld opslaan" hieronder), met
+   `database.rules.json` als Rules en één beheerder-account onder
+   Authentication -> Users.
+3. **Nieuw Vercel-project** met eigen `VITE_ACCESS_CODE`, de vier
+   `VITE_FIREBASE_*`-waarden en `VITE_FIREBASE_ADMIN_EMAIL` van het nieuwe
+   Firebase-project. Er zijn geen ingebouwde standaardcodes meer: zonder
+   ingestelde code kan niemand inloggen.
+
+---
+
+*Hieronder: oorspronkelijke documentatie van de regiokaart (algemeen).*
+
 
 React + Leaflet kaart. Klik op een naam links en de gemeenten die die adviseur
 doet lichten op als doorzichtige laag met omtreklijn over een echte kaart
