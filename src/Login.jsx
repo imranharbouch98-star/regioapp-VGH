@@ -1,15 +1,17 @@
 import { useState } from "react";
-import { firebaseEnabled, adminSignIn } from "./firebase.js";
+import { firebaseEnabled, signInWithCode, ADMIN_EMAIL, VIEWER_EMAIL } from "./firebase.js";
 
-// no built-in fallback codes: each client deployment sets its own in .env /
-// Vercel, and with nothing set nobody can log in (instead of a shared default)
-const VIEW_CODE = import.meta.env.VITE_ACCESS_CODE || "";
-// only used when Firebase isn't configured (local dev) -- there's no shared
-// database to protect in that case, so a plain code is fine as a fallback
+// With Firebase configured, both codes are checked by Firebase (they're the
+// passwords of the viewer/admin accounts) and these two are ignored. They're
+// only for local testing without Firebase -- no built-in fallback codes.
+const LOCAL_VIEW_CODE = import.meta.env.VITE_ACCESS_CODE || "";
 const LOCAL_ADMIN_CODE = import.meta.env.VITE_ADMIN_ACCESS_CODE || "";
-// the single shared admin account's email (created once in the Firebase
-// Console); the login form itself only asks for the password
-const ADMIN_EMAIL = import.meta.env.VITE_FIREBASE_ADMIN_EMAIL || "admin@vgh.local";
+
+function loginErrorMessage(err) {
+  if (err?.code === "auth/too-many-requests") return "Te veel pogingen, probeer het later opnieuw";
+  if (err?.code === "auth/network-request-failed") return "Geen verbinding, probeer opnieuw";
+  return "Foute code, probeer opnieuw";
+}
 
 export default function Login({ onSuccess }) {
   const [mode, setMode] = useState("viewer");
@@ -23,41 +25,40 @@ export default function Login({ onSuccess }) {
     setError("");
   }
 
-  function handleViewerSubmit(e) {
-    e.preventDefault();
-    if (!VIEW_CODE) {
-      setError("Toegangscode is niet ingesteld (VITE_ACCESS_CODE)");
-    } else if (code.trim() === VIEW_CODE) {
-      onSuccess("viewer");
-    } else {
-      setError("Foute code, probeer opnieuw");
-    }
-  }
-
-  async function handleAdminSubmit(e) {
-    e.preventDefault();
+  async function submitCode(role, typed) {
     setError("");
 
     if (!firebaseEnabled) {
-      if (!LOCAL_ADMIN_CODE) {
-        setError("Beheerderscode is niet ingesteld (VITE_ADMIN_ACCESS_CODE)");
-      } else if (password === LOCAL_ADMIN_CODE) {
-        onSuccess("admin");
+      const expected = role === "admin" ? LOCAL_ADMIN_CODE : LOCAL_VIEW_CODE;
+      if (!expected) {
+        setError(`Code is niet ingesteld (${role === "admin" ? "VITE_ADMIN_ACCESS_CODE" : "VITE_ACCESS_CODE"})`);
+      } else if (typed === expected) {
+        onSuccess(role);
       } else {
         setError("Foute code, probeer opnieuw");
       }
       return;
     }
 
+    // App picks up the signed-in account itself via the auth listener
     setBusy(true);
     try {
-      await adminSignIn(ADMIN_EMAIL, password);
-      onSuccess("admin");
-    } catch {
-      setError("Foute code, probeer opnieuw");
+      await signInWithCode(role === "admin" ? ADMIN_EMAIL : VIEWER_EMAIL, typed);
+    } catch (err) {
+      setError(loginErrorMessage(err));
     } finally {
       setBusy(false);
     }
+  }
+
+  function handleViewerSubmit(e) {
+    e.preventDefault();
+    submitCode("viewer", code.trim());
+  }
+
+  function handleAdminSubmit(e) {
+    e.preventDefault();
+    submitCode("admin", password);
   }
 
   if (mode === "admin") {
@@ -98,7 +99,9 @@ export default function Login({ onSuccess }) {
           placeholder="Toegangscode"
         />
         {error && <p className="warning">{error}</p>}
-        <button type="submit" className="save-btn">Openen</button>
+        <button type="submit" className="save-btn" disabled={busy}>
+          {busy ? "Bezig..." : "Openen"}
+        </button>
         <button type="button" className="login-switch" onClick={() => switchMode("admin")}>
           Ben je beheerder? Log hier in →
         </button>

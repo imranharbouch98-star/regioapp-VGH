@@ -18,17 +18,43 @@ opmerking per postcode, plaatsnamen) en `public/data/postcodes-vgh.geojson`
 257") worden weggelaten; tekst tussen haakjes ("(vanaf 200k €)") wordt de
 opmerking bij die postcode.
 
-## VGH opzetten (eenmalig)
+## Inloggen en live delen via Firebase
 
-1. **Nieuwe GitHub-repo** voor VGH, en `git remote set-url origin <nieuwe-url>`
-   -- deze map wijst nog naar de repo van de originele klant.
-2. **Nieuw Firebase-project** (zie "Gedeeld opslaan" hieronder), met
-   `database.rules.json` als Rules en één beheerder-account onder
-   Authentication -> Users.
-3. **Nieuw Vercel-project** met eigen `VITE_ACCESS_CODE`, de vier
-   `VITE_FIREBASE_*`-waarden en `VITE_FIREBASE_ADMIN_EMAIL` van het nieuwe
-   Firebase-project. Er zijn geen ingebouwde standaardcodes meer: zonder
-   ingestelde code kan niemand inloggen.
+Inloggen gebeurt met een code, en Firebase controleert die: er zijn twee
+gedeelde Firebase-accounts, `viewer@vgh.local` (bekijken) en
+`admin@vgh.local` (bewerken), en het wachtwoord van elk account **is** de
+code. De app bevat zelf geen codes. Alle aanpassingen gaan naar de Firebase
+Realtime Database en verschijnen binnen een seconde bij iedereen.
+
+De database-regels (`database.rules.json`): lezen kan enkel wie ingelogd
+is, schrijven enkel het beheerder-account.
+
+### Eenmalig opzetten (~10 minuten)
+
+1. [console.firebase.google.com](https://console.firebase.google.com) ->
+   **Create a project** (bv. "vgh-regiokaart"), Google Analytics mag uit.
+2. **Build -> Realtime Database -> Create Database** -> locatie
+   **europe-west1 (Belgium)** -> **Start in locked mode**.
+3. Tab **Rules** -> vervang alles door de inhoud van `database.rules.json`
+   -> **Publish**.
+4. **Build -> Authentication -> Get started -> Email/Password** -> aanzetten
+   (enkel de eerste schakelaar) -> **Save**.
+5. Tab **Users -> Add user**, twee keer:
+   - `viewer@vgh.local` met als wachtwoord de **bekijkcode**
+   - `admin@vgh.local` met als wachtwoord de **beheerderscode**
+
+   (minstens 6 tekens; de adressen hoeven niet te bestaan)
+6. Tandwiel -> **Project settings -> Your apps -> `</>` (Web)** -> naam
+   bv. "vgh-web" -> **Register app**. Neem uit het codeblokje `apiKey`,
+   `authDomain`, `databaseURL` en `projectId` over in `.env`
+   (`VITE_FIREBASE_*`, zie `.env.example`). Staat `databaseURL` er niet
+   bij, kopieer dan de URL bovenaan de Realtime Database-pagina.
+7. **Vercel** -> project -> Settings -> Environment Variables -> dezelfde vier
+   `VITE_FIREBASE_*`-waarden toevoegen -> **Redeploy**.
+
+Een code wijzigen: Authentication -> Users -> `⋮` bij het account ->
+**Reset password** werkt niet (nep-adres); verwijder het account en maak het
+opnieuw aan met de nieuwe code.
 
 ---
 

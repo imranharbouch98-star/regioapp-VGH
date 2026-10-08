@@ -4,7 +4,7 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import "./App.css";
 import Login from "./Login.jsx";
-import { firebaseEnabled, subscribeToOverrides, saveOverridesShared, subscribeToAdminAuth, adminSignOut } from "./firebase.js";
+import { firebaseEnabled, subscribeToOverrides, saveOverridesShared, subscribeToAuth, firebaseSignOut, roleForUser } from "./firebase.js";
 import avatarMale from "./assets/avatar-male.png";
 import avatarFemale from "./assets/avatar-female.png";
 
@@ -26,20 +26,21 @@ const MAX_SEARCH_FIELDS = SEARCH_COLORS.length;
 
 const PRIO_OPTIONS = ["1", "2", "3"];
 
-const PRODUCT_DEFS = [
-  { id: "airco", emoji: "🌬️", label: "Airco" },
-  { id: "zp", emoji: "☀️", label: "Zonnepanelen" },
-  { id: "thuisbatterij", emoji: "🔋", label: "Thuisbatterij" },
-  { id: "wplw", emoji: "🔥", label: "Lucht-Water warmtepomp" },
-  { id: "wpb", emoji: "💧", label: "Warmtepompboiler" },
-  { id: "infraroodpanelen", emoji: "🌡️", label: "Infraroodpanelen" },
+// welk soort panden een adviseur doet -- meerdere mogelijk
+const PROPERTY_TYPE_DEFS = [
+  { id: "woning", emoji: "🏠", label: "Woning" },
+  { id: "gemengd", emoji: "🏘️", label: "Gemengde woning" },
+  { id: "handelspand", emoji: "🏪", label: "Handelspand" },
 ];
 
 const LANGUAGE_DEFS = ["FR", "NL", "ENG"];
 
 const GENDER_AVATARS = { m: avatarMale, v: avatarFemale };
 
-const ONLINE_OFFERTE_LABELS = { ja: "👍 Ja!", nee: "👎 Nee!", eigen_klant: "Enkel eigen klant" };
+function formatEuro(value) {
+  const n = Number(value);
+  return Number.isFinite(n) && value !== "" ? `€ ${n.toLocaleString("nl-BE")}` : value;
+}
 
 function ProfileAvatar({ gender }) {
   const src = GENDER_AVATARS[gender];
@@ -51,8 +52,10 @@ function emptyProfile() {
   return {
     gender: "",
     tier: "",
-    products: [],
-    onlineOfferte: "",
+    propertyTypes: [],
+    pandenVanaf: "",
+    meesteInteresse: "",
+    regio: "",
     languages: [],
     languagesExtra: "",
     thuisbatterijEnkel: "",
@@ -74,9 +77,9 @@ const DEPARTMENTS = [
     advisorsHome: {},
     postcodeNames: postcodeNamesVgh,
     postcodeInfoBase: postcodeInfoVgh,
-    // "Chantal niet actief momenteel" in de spreadsheet; een beheerder kan dit
+    // momenteel niet actief (spreadsheet + doorgegeven); een beheerder kan dit
     // per adviseur aan/uit zetten in het profiel (dat wint dan altijd)
-    inactiveAdvisorsBase: ["Chantal Groeneveld"],
+    inactiveAdvisorsBase: ["Chantal Groeneveld", "Inge Steurs"],
     postcodeInfoStorageKey: "postcode-info-overrides-vgh",
     postcodeInfoFirebasePath: "postcodeInfoOverrides",
     notesSeed: [],
@@ -167,14 +170,29 @@ function MapEvents({ onZoom, onBounds }) {
 }
 
 export default function App() {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === "1");
-  const [role, setRole] = useState(() => sessionStorage.getItem(ROLE_KEY) || "viewer");
-  const [fbAdminAuthed, setFbAdminAuthed] = useState(false);
+  // local-only mode (no Firebase): logged-in state lives in sessionStorage
+  const [localAuthed, setLocalAuthed] = useState(() => sessionStorage.getItem(AUTH_KEY) === "1");
+  const [localRole, setLocalRole] = useState(() => sessionStorage.getItem(ROLE_KEY) || "viewer");
+  // Firebase mode: logged-in state is whichever Firebase account is signed in.
+  // undefined = Firebase is still restoring the session after a page load
+  const [fbUser, setFbUser] = useState(firebaseEnabled ? undefined : null);
   const [activeDept, setActiveDept] = useState(DEPARTMENTS[0].id);
 
   useEffect(() => {
-    return subscribeToAdminAuth(setFbAdminAuthed);
+    return subscribeToAuth((user) => setFbUser(user || null));
   }, []);
+
+  // wait for the restored session before rendering the map: the database
+  // only allows reads for a signed-in account, and a listener that gets
+  // refused before sign-in is done would never recover
+  if (firebaseEnabled && fbUser === undefined) {
+    return <div className="login-screen"><p className="hint">Laden...</p></div>;
+  }
+
+  const authed = firebaseEnabled ? Boolean(fbUser) : localAuthed;
+  // with Firebase the role comes from which account is signed in, and the
+  // database rules enforce it -- nothing in the browser can fake it
+  const role = firebaseEnabled ? roleForUser(fbUser) : localRole;
 
   if (!authed) {
     return (
@@ -182,25 +200,22 @@ export default function App() {
         onSuccess={(r) => {
           sessionStorage.setItem(AUTH_KEY, "1");
           sessionStorage.setItem(ROLE_KEY, r);
-          setRole(r);
-          setAuthed(true);
+          setLocalRole(r);
+          setLocalAuthed(true);
         }}
       />
     );
   }
 
   const dept = DEPARTMENTS.find((d) => d.id === activeDept);
-  // admin UI/writes require a real Firebase-authenticated session when
-  // Firebase is configured -- sessionStorage alone can be faked from
-  // devtools, so it's no longer the actual security boundary
-  const isAdmin = role === "admin" && (!firebaseEnabled || fbAdminAuthed);
+  const isAdmin = role === "admin";
 
   function handleLogout() {
     sessionStorage.removeItem(AUTH_KEY);
     sessionStorage.removeItem(ROLE_KEY);
-    adminSignOut();
-    setRole("viewer");
-    setAuthed(false);
+    firebaseSignOut();
+    setLocalRole("viewer");
+    setLocalAuthed(false);
   }
 
   return (
@@ -281,7 +296,6 @@ function DeptMap({ config, isAdmin }) {
   const advisorLayerRef = useRef(null);
   const notesSeededRef = useRef(false);
   const toastTimeoutRef = useRef(null);
-  const productsMigratedRef = useRef(false);
   const handlePostcodeClickRef = useRef(() => {});
   const activePopupRef = useRef(null);
 
@@ -327,48 +341,11 @@ function DeptMap({ config, isAdmin }) {
     }
   }, [postcodeInfoFirebasePath]);
 
-  // one-time backfill: copy each advisor's original product tags into their
-  // profile, since the profile used to be a separate, empty data store
-  function backfillProductsFromTags(currentProfiles) {
-    const productIds = PRODUCT_DEFS.map((p) => p.id);
-    let changed = false;
-    const next = { ...currentProfiles };
-    Object.keys(advisorTagsBase).forEach((name) => {
-      const existing = next[name];
-      if (existing && existing.products && existing.products.length > 0) return;
-      const seedTags = advisorTagsBase[name] || [];
-      const products = productIds.filter((id) => seedTags.includes(id));
-      if (products.length === 0) return;
-      next[name] = { ...emptyProfile(), ...(existing || {}), products };
-      changed = true;
-    });
-    return changed ? next : null;
-  }
-
   useEffect(() => {
     if (firebaseEnabled) {
-      const unsubscribe = subscribeToOverrides(profilesFirebasePath, (shared) => {
-        setProfiles(shared);
-        if (!productsMigratedRef.current) {
-          productsMigratedRef.current = true;
-          const migrated = backfillProductsFromTags(shared);
-          if (migrated) {
-            setProfiles(migrated);
-            saveOverridesShared(profilesFirebasePath, migrated);
-          }
-        }
-      });
+      const unsubscribe = subscribeToOverrides(profilesFirebasePath, (shared) => setProfiles(shared));
       return unsubscribe;
     }
-    if (!productsMigratedRef.current) {
-      productsMigratedRef.current = true;
-      const migrated = backfillProductsFromTags(profiles);
-      if (migrated) {
-        setProfiles(migrated);
-        saveOverridesLocal(profilesStorageKey, migrated);
-      }
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profilesFirebasePath]);
 
   useEffect(() => {
@@ -383,7 +360,8 @@ function DeptMap({ config, isAdmin }) {
         notesSeededRef.current = true;
         const migrated = migrateSeedNotes(notesSeed);
         setNotesList(migrated);
-        saveOverridesShared(notesFirebasePath, migrated);
+        // only an admin may write; nothing to seed when there are no bundled notes
+        if (isAdmin && migrated.length) saveOverridesShared(notesFirebasePath, migrated);
       } else {
         setNotesList([]);
       }
@@ -391,6 +369,13 @@ function DeptMap({ config, isAdmin }) {
     return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [notesFirebasePath]);
+
+  useEffect(() => {
+    const onSaveError = () => showToast("Opslaan mislukt -- controleer je verbinding");
+    window.addEventListener("firebase-save-error", onSaveError);
+    return () => window.removeEventListener("firebase-save-error", onSaveError);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     if (!panelAdvisor) return;
@@ -1174,9 +1159,9 @@ function DeptMap({ config, isAdmin }) {
             const isPrio = Boolean(oldPrioTag) || isTierA;
             const prioLabel = oldPrioTag?.label || "A-Adviseur";
             const prioEmoji = oldPrioTag?.emoji || "👑";
-            const nameProducts = profiles[name]?.products || [];
-            const activeTags = PRODUCT_DEFS.filter((p) => nameProducts.includes(p.id));
             const inactive = isInactive(name);
+            const nameTypes = profiles[name]?.propertyTypes || [];
+            const typeIcons = PROPERTY_TYPE_DEFS.filter((t) => nameTypes.includes(t.id));
             return (
               <li key={name} className={inactive ? "advisor-row inactive" : "advisor-row"}>
                 <button
@@ -1201,14 +1186,10 @@ function DeptMap({ config, isAdmin }) {
                     )}
                     {(overrides[name] || tagOverrides[name]) && <span className="edited-mark" title="Aangepast">●</span>}
                   </span>
-                  {inactive && (
+                  {(inactive || typeIcons.length > 0) && (
                     <span className="advisor-row-icons">
-                      <span className="inactive-badge" title="Momenteel niet actief">niet actief</span>
-                    </span>
-                  )}
-                  {activeTags.length > 0 && (
-                    <span className="advisor-row-icons">
-                      {activeTags.map((td) => <span key={td.id} title={td.label}>{td.emoji}</span>)}
+                      {typeIcons.map((t) => <span key={t.id} title={t.label}>{t.emoji}</span>)}
+                      {inactive && <span className="inactive-badge" title="Momenteel niet actief">niet actief</span>}
                     </span>
                   )}
                 </button>
@@ -1436,7 +1417,7 @@ function DeptMap({ config, isAdmin }) {
 
       {panelAdvisor && (() => {
         // merged with the defaults: Firebase drops empty arrays, so a saved
-        // profile can come back without `products`/`languages`
+        // profile can come back without `propertyTypes`/`languages`
         const viewProfile = { ...emptyProfile(), ...(profiles[panelAdvisor] || {}) };
         return (
           <>
@@ -1520,28 +1501,51 @@ function DeptMap({ config, isAdmin }) {
                   </div>
 
                   <div className="profile-section">
-                    <p className="hint">Welke producten</p>
+                    <p className="hint">Type panden</p>
                     <div className="profile-checkbox-grid">
-                      {PRODUCT_DEFS.map((p) => (
-                        <label key={p.id} className="profile-checkbox-row">
+                      {PROPERTY_TYPE_DEFS.map((t) => (
+                        <label key={t.id} className="profile-checkbox-row">
                           <input
                             type="checkbox"
-                            checked={profileDraft.products.includes(p.id)}
-                            onChange={() => toggleProfileListField("products", p.id)}
+                            checked={profileDraft.propertyTypes.includes(t.id)}
+                            onChange={() => toggleProfileListField("propertyTypes", t.id)}
                           />
-                          <span>{p.emoji} {p.label}</span>
+                          <span>{t.emoji} {t.label}</span>
                         </label>
                       ))}
                     </div>
                   </div>
 
                   <div className="profile-section">
-                    <p className="hint">Online offerte</p>
-                    <div className="profile-radio-row">
-                      <label><input type="radio" name="onlineOfferte" checked={profileDraft.onlineOfferte === "ja"} onChange={() => updateProfileField("onlineOfferte", "ja")} /> 👍 Ja!</label>
-                      <label><input type="radio" name="onlineOfferte" checked={profileDraft.onlineOfferte === "nee"} onChange={() => updateProfileField("onlineOfferte", "nee")} /> 👎 Nee!</label>
-                      <label><input type="radio" name="onlineOfferte" checked={profileDraft.onlineOfferte === "eigen_klant"} onChange={() => updateProfileField("onlineOfferte", "eigen_klant")} /> Enkel eigen klant</label>
-                    </div>
+                    <p className="hint">Panden vanaf (€)</p>
+                    <input
+                      type="number"
+                      min="0"
+                      step="10000"
+                      placeholder="bv. 200000"
+                      value={profileDraft.pandenVanaf}
+                      onChange={(e) => updateProfileField("pandenVanaf", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="profile-section">
+                    <p className="hint">Meeste interesse in</p>
+                    <input
+                      type="text"
+                      placeholder="bv. villa's, appartementen"
+                      value={profileDraft.meesteInteresse}
+                      onChange={(e) => updateProfileField("meesteInteresse", e.target.value)}
+                    />
+                  </div>
+
+                  <div className="profile-section">
+                    <p className="hint">In regio</p>
+                    <input
+                      type="text"
+                      placeholder="bv. Lier, Kempen"
+                      value={profileDraft.regio}
+                      onChange={(e) => updateProfileField("regio", e.target.value)}
+                    />
                   </div>
 
                   <div className="profile-section">
@@ -1609,18 +1613,28 @@ function DeptMap({ config, isAdmin }) {
                   )}
 
                   <div className="profile-section">
-                    <p className="hint">Welke producten</p>
+                    <p className="hint">Type panden</p>
                     <div className="profile-chip-row">
-                      {PRODUCT_DEFS.filter((p) => viewProfile.products.includes(p.id)).map((p) => (
-                        <span key={p.id} className="profile-chip">{p.emoji} {p.label}</span>
+                      {PROPERTY_TYPE_DEFS.filter((t) => viewProfile.propertyTypes.includes(t.id)).map((t) => (
+                        <span key={t.id} className="profile-chip">{t.emoji} {t.label}</span>
                       ))}
-                      {viewProfile.products.length === 0 && <span className="hint">Nog niet ingevuld</span>}
+                      {viewProfile.propertyTypes.length === 0 && <span className="hint">Nog niet ingevuld</span>}
                     </div>
                   </div>
 
                   <div className="profile-section">
-                    <p className="hint">Online offerte</p>
-                    <p>{ONLINE_OFFERTE_LABELS[viewProfile.onlineOfferte] || "Nog niet ingevuld"}</p>
+                    <p className="hint">Panden vanaf</p>
+                    <p>{viewProfile.pandenVanaf ? formatEuro(viewProfile.pandenVanaf) : "Nog niet ingevuld"}</p>
+                  </div>
+
+                  <div className="profile-section">
+                    <p className="hint">Meeste interesse in</p>
+                    <p>{viewProfile.meesteInteresse || "Nog niet ingevuld"}</p>
+                  </div>
+
+                  <div className="profile-section">
+                    <p className="hint">In regio</p>
+                    <p>{viewProfile.regio || "Nog niet ingevuld"}</p>
                   </div>
 
                   <div className="profile-section">
