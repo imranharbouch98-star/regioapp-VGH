@@ -26,7 +26,7 @@ const MAX_SEARCH_FIELDS = SEARCH_COLORS.length;
 
 const PRIO_OPTIONS = ["1", "2", "3"];
 
-// welk soort panden een adviseur doet -- meerdere mogelijk
+// welk soort panden een makelaar doet -- meerdere mogelijk
 const PROPERTY_TYPE_DEFS = [
   { id: "woning", emoji: "🏠", label: "Woning" },
   { id: "gemengd", emoji: "🏘️", label: "Gemengde woning" },
@@ -78,7 +78,7 @@ const DEPARTMENTS = [
     postcodeNames: postcodeNamesVgh,
     postcodeInfoBase: postcodeInfoVgh,
     // momenteel niet actief (spreadsheet + doorgegeven); een beheerder kan dit
-    // per adviseur aan/uit zetten in het profiel (dat wint dan altijd)
+    // per makelaar aan/uit zetten in het profiel (dat wint dan altijd)
     inactiveAdvisorsBase: ["Chantal Groeneveld", "Inge Steurs"],
     postcodeInfoStorageKey: "postcode-info-overrides-vgh",
     postcodeInfoFirebasePath: "postcodeInfoOverrides",
@@ -881,7 +881,7 @@ function DeptMap({ config, isAdmin }) {
     }
     setPanelAdvisor(null);
     setProfileDraft(null);
-    showToast("Adviseur verwijderd");
+    showToast("Makelaar verwijderd");
   }
 
   function addAdvisor(e) {
@@ -918,7 +918,7 @@ function DeptMap({ config, isAdmin }) {
       }
     }
     setNewAdvisorName("");
-    showToast("Adviseur toegevoegd");
+    showToast("Makelaar toegevoegd");
   }
 
   function updateProfileField(field, value) {
@@ -1120,7 +1120,7 @@ function DeptMap({ config, isAdmin }) {
   return (
     <div className="app">
       <aside className="sidebar">
-        <h1>Adviseurs</h1>
+        <h1>Makelaars</h1>
         <p className={firebaseEnabled ? "sync-status live" : "sync-status local"}>
           {firebaseEnabled ? "● Live gedeeld met iedereen" : "○ Enkel lokaal (niet gedeeld)"}
         </p>
@@ -1139,11 +1139,11 @@ function DeptMap({ config, isAdmin }) {
           <form className="add-advisor-form" onSubmit={addAdvisor}>
             <input
               type="text"
-              placeholder="Naam nieuwe adviseur"
+              placeholder="Naam nieuwe makelaar"
               value={newAdvisorName}
               onChange={(e) => { setNewAdvisorName(e.target.value); setAddAdvisorError(""); }}
             />
-            <button type="submit" className="add-advisor-btn" title="Adviseur toevoegen">+</button>
+            <button type="submit" className="add-advisor-btn" title="Makelaar toevoegen">+</button>
           </form>
         )}
         {addAdvisorError && <p className="warning">{addAdvisorError}</p>}
@@ -1157,7 +1157,7 @@ function DeptMap({ config, isAdmin }) {
             const oldPrioTag = tagDefs.find((td) => td.bold && nameTags.includes(td.id));
             const isTierA = profiles[name]?.tier === "A";
             const isPrio = Boolean(oldPrioTag) || isTierA;
-            const prioLabel = oldPrioTag?.label || "A-Adviseur";
+            const prioLabel = oldPrioTag?.label || "A-Makelaar";
             const prioEmoji = oldPrioTag?.emoji || "👑";
             const inactive = isInactive(name);
             const nameTypes = profiles[name]?.propertyTypes || [];
@@ -1493,10 +1493,10 @@ function DeptMap({ config, isAdmin }) {
                   </div>
 
                   <div className="profile-section">
-                    <p className="hint">👑 Type adviseur</p>
+                    <p className="hint">👑 Type makelaar</p>
                     <div className="profile-radio-row">
-                      <label><input type="radio" name="tier" checked={profileDraft.tier === "A"} onChange={() => updateProfileField("tier", "A")} /> 👑 A-Adviseur</label>
-                      <label><input type="radio" name="tier" checked={profileDraft.tier === "B"} onChange={() => updateProfileField("tier", "B")} /> B-Adviseur</label>
+                      <label><input type="radio" name="tier" checked={profileDraft.tier === "A"} onChange={() => updateProfileField("tier", "A")} /> 👑 A-Makelaar</label>
+                      <label><input type="radio" name="tier" checked={profileDraft.tier === "B"} onChange={() => updateProfileField("tier", "B")} /> B-Makelaar</label>
                     </div>
                   </div>
 
@@ -1609,7 +1609,7 @@ function DeptMap({ config, isAdmin }) {
                   <div className="profile-photo"><ProfileAvatar gender={viewProfile.gender} /></div>
                   {isInactive(panelAdvisor) && <p className="inactive-badge">Momenteel niet actief</p>}
                   {viewProfile.tier && (
-                    <p className="profile-tier">{viewProfile.tier === "A" ? "👑 A-Adviseur" : "B-Adviseur"}</p>
+                    <p className="profile-tier">{viewProfile.tier === "A" ? "👑 A-Makelaar" : "B-Makelaar"}</p>
                   )}
 
                   <div className="profile-section">

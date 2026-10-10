@@ -89,7 +89,7 @@ export default function Login({ onSuccess }) {
   return (
     <div className="login-screen">
       <form className="login-box" onSubmit={handleViewerSubmit}>
-        <h1>Adviseurs regiokaart</h1>
+        <h1>Makelaars regiokaart</h1>
         <p className="hint">Voer de toegangscode in</p>
         <input
           type="password"
