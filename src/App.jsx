@@ -58,7 +58,6 @@ function emptyProfile() {
     regio: "",
     languages: [],
     languagesExtra: "",
-    thuisbatterijEnkel: "",
     travelRadiusMin: "",
     extraInfo: "",
   };
@@ -1571,14 +1570,6 @@ function DeptMap({ config, isAdmin }) {
                   </div>
 
                   <div className="profile-section">
-                    <p className="hint">Doet een afspraak voor ENKEL een thuisbatterij</p>
-                    <div className="profile-radio-row">
-                      <label><input type="radio" name="thuisbatterijEnkel" checked={profileDraft.thuisbatterijEnkel === "ja"} onChange={() => updateProfileField("thuisbatterijEnkel", "ja")} /> 👍 Ja!</label>
-                      <label><input type="radio" name="thuisbatterijEnkel" checked={profileDraft.thuisbatterijEnkel === "nee"} onChange={() => updateProfileField("thuisbatterijEnkel", "nee")} /> 👎 Nee!</label>
-                    </div>
-                  </div>
-
-                  <div className="profile-section">
                     <p className="hint">Eerste/laatste afspraak: max. … min van thuisbasis</p>
                     <input
                       type="number"
@@ -1640,17 +1631,6 @@ function DeptMap({ config, isAdmin }) {
                   <div className="profile-section">
                     <p className="hint">Welke talen</p>
                     <p>{[...viewProfile.languages, viewProfile.languagesExtra].filter(Boolean).join(", ") || "Nog niet ingevuld"}</p>
-                  </div>
-
-                  <div className="profile-section">
-                    <p className="hint">Doet een afspraak voor ENKEL een thuisbatterij</p>
-                    <p>
-                      {viewProfile.thuisbatterijEnkel === "ja"
-                        ? "👍 Ja!"
-                        : viewProfile.thuisbatterijEnkel === "nee"
-                        ? "👎 Nee!"
-                        : "Nog niet ingevuld"}
-                    </p>
                   </div>
 
                   <div className="profile-section">
